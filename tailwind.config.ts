@@ -66,6 +66,7 @@ export default {
 			},
 			fontFamily: {
 				'share-tech': ['Share Tech Mono', 'monospace'],
+				'roboto-mono': ['Roboto Mono', 'monospace'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

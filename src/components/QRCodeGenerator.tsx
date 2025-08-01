@@ -151,7 +151,7 @@ export const QRCodeGenerator = () => {
             let fontSize = Math.max(32, img.width * 0.06); // Start with 6% of canvas width, minimum 32px
             
             // Measure text and adjust font size to achieve 52% width coverage
-            ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+            ctx.font = `50px "Roboto Mono", monospace`;
             let textMetrics = ctx.measureText(text);
             
             // Adjust font size to match target width
@@ -166,7 +166,7 @@ export const QRCodeGenerator = () => {
             gradient.addColorStop(1, '#DABC5B');
             
             ctx.fillStyle = gradient;
-            ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+            ctx.font = `50px "Roboto Mono", monospace`;
             ctx.textAlign = 'center';
             ctx.letterSpacing = '3px';
             
@@ -187,7 +187,7 @@ export const QRCodeGenerator = () => {
           gradient.addColorStop(1, '#DABC5B');
           
           ctx.fillStyle = gradient;
-          ctx.font = `${fontSize}px "Share Tech Mono", monospace`;
+          ctx.font = `50px "Roboto Mono", monospace`;
           ctx.textAlign = 'center';
           ctx.letterSpacing = '3px';
           
