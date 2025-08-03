@@ -29,14 +29,19 @@ export const QRCodeGenerator = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const generateFilename = (text: string): string => {
+  const generateFilename = (text: string, index: number): string => {
     const cleanText = text.trim();
+    let baseFilename: string;
+    
     if (cleanText.length >= 11) {
-      return cleanText.slice(-11);
+      baseFilename = cleanText.slice(-11);
     } else {
       const padding = 'x'.repeat(11 - cleanText.length);
-      return cleanText + padding;
+      baseFilename = cleanText + padding;
     }
+    
+    // Add index to ensure uniqueness
+    return `${baseFilename}_${String(index).padStart(3, '0')}`;
   };
 
   const generateQRCode = async (text: string): Promise<string> => {
@@ -242,7 +247,7 @@ export const QRCodeGenerator = () => {
               return null;
             }
 
-            const filename = generateFilename(trimmedText);
+            const filename = generateFilename(trimmedText, i + batchIndex);
             
             try {
               // Generate QR code
