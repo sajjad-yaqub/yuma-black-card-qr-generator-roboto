@@ -225,37 +225,65 @@ export const QRCodeGenerator = () => {
 
     try {
       const items: ProcessedItem[] = [];
+      const batchSize = 5; // Process fewer items at once to prevent memory issues
       
-      for (let i = 0; i < dataToProcess.length; i++) {
-        const text = dataToProcess[i].trim();
-        if (!text) continue;
+      for (let i = 0; i < dataToProcess.length; i += batchSize) {
+        const batch = dataToProcess.slice(i, i + batchSize);
+        
+        const batchResults = await Promise.all(
+          batch.map(async (text, batchIndex) => {
+            const trimmedText = text.trim();
+            if (!trimmedText) return null;
 
-        const filename = generateFilename(text);
-        
-        // Generate QR code
-        const qrDataUrl = await generateQRCode(text);
-        const gradientQR = await createGradientQR(qrDataUrl);
-        
-        // Create front and back images
-        const frontImageData = await overlayOnImage(frontImage, filename, undefined, false);
-        const backImageData = await overlayOnImage(backImage, filename, gradientQR, true);
-        
-        items.push({
-          text,
-          filename,
-          qrCode: gradientQR,
-          frontImage: frontImageData,
-          backImage: backImageData
-        });
+            const filename = generateFilename(trimmedText);
+            
+            try {
+              // Generate QR code
+              const qrDataUrl = await generateQRCode(trimmedText);
+              const gradientQR = await createGradientQR(qrDataUrl);
+              
+              // Create front and back images
+              const frontImageData = await overlayOnImage(frontImage, filename, undefined, false);
+              const backImageData = await overlayOnImage(backImage, filename, gradientQR, true);
+              
+              return {
+                text: trimmedText,
+                filename,
+                qrCode: gradientQR,
+                frontImage: frontImageData,
+                backImage: backImageData
+              };
+            } catch (error) {
+              console.error(`Error processing item ${trimmedText}:`, error);
+              return null;
+            }
+          })
+        );
 
-        setProgress(((i + 1) / dataToProcess.length) * 100);
+        // Filter out null results and add to items
+        const validResults = batchResults.filter(item => item !== null) as ProcessedItem[];
+        items.push(...validResults);
+        
+        // Update progress
+        const totalProcessed = i + batch.length;
+        setProgress((totalProcessed / dataToProcess.length) * 100);
+        
+        // Show progress toast for large batches
+        if (dataToProcess.length > 20) {
+          toast.success(`Processed ${Math.min(totalProcessed, dataToProcess.length)}/${dataToProcess.length} items`);
+        }
+        
+        // Add small delay between batches to prevent overwhelming the browser
+        if (i + batchSize < dataToProcess.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
 
       setProcessedItems(items);
       toast.success(`Successfully processed ${items.length} items`);
     } catch (error) {
       console.error('Error processing files:', error);
-      toast.error('Error processing files. Please check your inputs.');
+      toast.error(`Error processing files: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -302,81 +330,62 @@ export const QRCodeGenerator = () => {
 
     const zip = new JSZip();
     const masterFolder = zip.folder('QR_Code_Cards_PDF');
+    const batchSize = 10; // Process in smaller batches to prevent memory issues
+    let processedCount = 0;
     
-    for (const item of processedItems) {
-      // Create individual folder for each card
-      const cardFolder = masterFolder!.folder(item.filename);
-      
-      // Generate PDF for front image
-      const frontPdf = new jsPDF();
-      const frontImg = new Image();
-      
-      await new Promise<void>((resolve) => {
-        frontImg.onload = () => {
-          const pdfWidth = frontPdf.internal.pageSize.getWidth();
-          const pdfHeight = frontPdf.internal.pageSize.getHeight();
-          const imgAspectRatio = frontImg.width / frontImg.height;
-          const pdfAspectRatio = pdfWidth / pdfHeight;
-          
-          let finalWidth, finalHeight;
-          if (imgAspectRatio > pdfAspectRatio) {
-            finalWidth = pdfWidth;
-            finalHeight = pdfWidth / imgAspectRatio;
-          } else {
-            finalHeight = pdfHeight;
-            finalWidth = pdfHeight * imgAspectRatio;
-          }
-          
-          const x = (pdfWidth - finalWidth) / 2;
-          const y = (pdfHeight - finalHeight) / 2;
-          
-          frontPdf.addImage(item.frontImage, 'PNG', x, y, finalWidth, finalHeight);
-          const frontPdfBlob = frontPdf.output('blob');
-          cardFolder!.file(`${item.filename}_front.pdf`, frontPdfBlob);
-          resolve();
-        };
-        frontImg.src = item.frontImage;
-      });
-
-      // Generate PDF for back image
-      const backPdf = new jsPDF();
-      const backImg = new Image();
-      
-      await new Promise<void>((resolve) => {
-        backImg.onload = () => {
-          const pdfWidth = backPdf.internal.pageSize.getWidth();
-          const pdfHeight = backPdf.internal.pageSize.getHeight();
-          const imgAspectRatio = backImg.width / backImg.height;
-          const pdfAspectRatio = pdfWidth / pdfHeight;
-          
-          let finalWidth, finalHeight;
-          if (imgAspectRatio > pdfAspectRatio) {
-            finalWidth = pdfWidth;
-            finalHeight = pdfWidth / imgAspectRatio;
-          } else {
-            finalHeight = pdfHeight;
-            finalWidth = pdfHeight * imgAspectRatio;
-          }
-          
-          const x = (pdfWidth - finalWidth) / 2;
-          const y = (pdfHeight - finalHeight) / 2;
-          
-          backPdf.addImage(item.backImage, 'PNG', x, y, finalWidth, finalHeight);
-          const backPdfBlob = backPdf.output('blob');
-          cardFolder!.file(`${item.filename}_back.pdf`, backPdfBlob);
-          resolve();
-        };
-        backImg.src = item.backImage;
-      });
-    }
-
     try {
-      const content = await zip.generateAsync({ type: 'blob' });
+      // Process items in batches
+      for (let i = 0; i < processedItems.length; i += batchSize) {
+        const batch = processedItems.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (item) => {
+          // Create individual folder for each card
+          const cardFolder = masterFolder!.folder(item.filename);
+          
+          // Generate PDF for front image
+          const frontPdf = new jsPDF();
+          try {
+            frontPdf.addImage(item.frontImage, 'PNG', 0, 0, 210, 297, undefined, 'FAST'); // A4 size with FAST compression
+            const frontPdfBlob = frontPdf.output('blob');
+            cardFolder!.file(`${item.filename}_front.pdf`, frontPdfBlob);
+          } catch (error) {
+            console.error(`Error creating front PDF for ${item.filename}:`, error);
+          }
+
+          // Generate PDF for back image  
+          const backPdf = new jsPDF();
+          try {
+            backPdf.addImage(item.backImage, 'PNG', 0, 0, 210, 297, undefined, 'FAST'); // A4 size with FAST compression
+            const backPdfBlob = backPdf.output('blob');
+            cardFolder!.file(`${item.filename}_back.pdf`, backPdfBlob);
+          } catch (error) {
+            console.error(`Error creating back PDF for ${item.filename}:`, error);
+          }
+        }));
+        
+        processedCount += batch.length;
+        toast.success(`Processing PDFs: ${processedCount}/${processedItems.length} completed`);
+        
+        // Add small delay between batches to prevent overwhelming the browser
+        if (i + batchSize < processedItems.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      toast.success('Generating ZIP file...');
+      const content = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+          level: 6
+        }
+      });
+      
       saveAs(content, 'qr_code_pdfs.zip');
       toast.success('PDF ZIP file downloaded successfully');
     } catch (error) {
       console.error('Error creating PDF ZIP:', error);
-      toast.error('Error creating PDF ZIP file');
+      toast.error(`Error creating PDF ZIP file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
