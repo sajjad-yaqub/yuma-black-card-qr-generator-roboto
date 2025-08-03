@@ -255,6 +255,7 @@ export const QRCodeGenerator = () => {
               };
             } catch (error) {
               console.error(`Error processing item ${trimmedText}:`, error);
+              toast.error(`Failed to process: ${trimmedText}`);
               return null;
             }
           })
@@ -262,6 +263,10 @@ export const QRCodeGenerator = () => {
 
         // Filter out null results and add to items
         const validResults = batchResults.filter(item => item !== null) as ProcessedItem[];
+        const failedCount = batch.length - validResults.length;
+        if (failedCount > 0) {
+          console.warn(`${failedCount} items failed in batch starting at index ${i}`);
+        }
         items.push(...validResults);
         
         // Update progress
@@ -280,7 +285,12 @@ export const QRCodeGenerator = () => {
       }
 
       setProcessedItems(items);
-      toast.success(`Successfully processed ${items.length} items`);
+      const failedTotal = dataToProcess.length - items.length;
+      if (failedTotal > 0) {
+        toast.warning(`Processed ${items.length}/${dataToProcess.length} items (${failedTotal} failed)`);
+      } else {
+        toast.success(`Successfully processed ${items.length} items`);
+      }
     } catch (error) {
       console.error('Error processing files:', error);
       toast.error(`Error processing files: ${error instanceof Error ? error.message : 'Unknown error'}`);
