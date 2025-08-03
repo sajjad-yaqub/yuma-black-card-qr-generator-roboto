@@ -29,19 +29,14 @@ export const QRCodeGenerator = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const generateFilename = (text: string, index: number): string => {
+  const generateFilename = (text: string): string => {
     const cleanText = text.trim();
-    let baseFilename: string;
-    
     if (cleanText.length >= 11) {
-      baseFilename = cleanText.slice(-11);
+      return cleanText.slice(-11);
     } else {
       const padding = 'x'.repeat(11 - cleanText.length);
-      baseFilename = cleanText + padding;
+      return cleanText + padding;
     }
-    
-    // Add index to ensure uniqueness
-    return `${baseFilename}_${String(index).padStart(3, '0')}`;
   };
 
   const generateQRCode = async (text: string): Promise<string> => {
@@ -247,7 +242,7 @@ export const QRCodeGenerator = () => {
               return null;
             }
 
-            const filename = generateFilename(trimmedText, i + batchIndex);
+            const filename = generateFilename(trimmedText);
             
             try {
               // Generate QR code
@@ -327,19 +322,30 @@ export const QRCodeGenerator = () => {
     console.log(`📦 Creating ZIP with ${processedItems.length} items`);
     const zip = new JSZip();
     const masterFolder = zip.folder('QR_Code_Cards');
+    const usedFolderNames = new Set<string>();
     
     processedItems.forEach((item, index) => {
       console.log(`📁 Adding to ZIP [${index + 1}/${processedItems.length}]: ${item.filename}`);
+      
+      // Handle duplicate folder names
+      let folderName = item.filename;
+      let counter = 1;
+      while (usedFolderNames.has(folderName)) {
+        folderName = `${item.filename}_${String(counter).padStart(3, '0')}`;
+        counter++;
+      }
+      usedFolderNames.add(folderName);
+      
       // Create individual folder for each card
-      const cardFolder = masterFolder!.folder(item.filename);
+      const cardFolder = masterFolder!.folder(folderName);
       
       // Add front image to card folder
       const frontData = item.frontImage.split(',')[1];
-      cardFolder!.file(`${item.filename}_front.png`, frontData, { base64: true });
+      cardFolder!.file(`${folderName}_front.png`, frontData, { base64: true });
       
       // Add back image to card folder
       const backData = item.backImage.split(',')[1];
-      cardFolder!.file(`${item.filename}_back.png`, backData, { base64: true });
+      cardFolder!.file(`${folderName}_back.png`, backData, { base64: true });
     });
 
     try {
