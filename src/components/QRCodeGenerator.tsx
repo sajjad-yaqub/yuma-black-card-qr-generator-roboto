@@ -210,6 +210,9 @@ export const QRCodeGenerator = () => {
   const processFiles = async () => {
     const dataToProcess = csvData.length > 0 ? csvData : [];
     
+    console.log('🔍 Initial CSV data length:', csvData.length);
+    console.log('🔍 Data to process:', dataToProcess.map((item, i) => `${i}: "${item.trim()}"`));
+    
     if (dataToProcess.length === 0) {
       toast.error('Please add some data to process');
       return;
@@ -233,7 +236,11 @@ export const QRCodeGenerator = () => {
         const batchResults = await Promise.all(
           batch.map(async (text, batchIndex) => {
             const trimmedText = text.trim();
-            if (!trimmedText) return null;
+            console.log(`🔄 Processing item ${i + batchIndex}: "${text}" -> "${trimmedText}"`);
+            if (!trimmedText) {
+              console.log(`⚠️ Skipping empty item at index ${i + batchIndex}`);
+              return null;
+            }
 
             const filename = generateFilename(trimmedText);
             
@@ -246,6 +253,7 @@ export const QRCodeGenerator = () => {
               const frontImageData = await overlayOnImage(frontImage, filename, undefined, false);
               const backImageData = await overlayOnImage(backImage, filename, gradientQR, true);
               
+              console.log(`✅ Successfully processed: "${trimmedText}" -> "${filename}"`);
               return {
                 text: trimmedText,
                 filename,
@@ -254,7 +262,7 @@ export const QRCodeGenerator = () => {
                 backImage: backImageData
               };
             } catch (error) {
-              console.error(`Error processing item ${trimmedText}:`, error);
+              console.error(`❌ Error processing item "${trimmedText}":`, error);
               toast.error(`Failed to process: ${trimmedText}`);
               return null;
             }
@@ -264,6 +272,7 @@ export const QRCodeGenerator = () => {
         // Filter out null results and add to items
         const validResults = batchResults.filter(item => item !== null) as ProcessedItem[];
         const failedCount = batch.length - validResults.length;
+        console.log(`📊 Batch ${Math.floor(i/5) + 1}: ${validResults.length}/${batch.length} successful`);
         if (failedCount > 0) {
           console.warn(`${failedCount} items failed in batch starting at index ${i}`);
         }
@@ -284,6 +293,7 @@ export const QRCodeGenerator = () => {
         }
       }
 
+      console.log(`🎯 Final processed items: ${items.length}/${dataToProcess.length}`);
       setProcessedItems(items);
       const failedTotal = dataToProcess.length - items.length;
       if (failedTotal > 0) {
@@ -309,10 +319,12 @@ export const QRCodeGenerator = () => {
   const downloadAllAsZip = async () => {
     if (processedItems.length === 0) return;
 
+    console.log(`📦 Creating ZIP with ${processedItems.length} items`);
     const zip = new JSZip();
     const masterFolder = zip.folder('QR_Code_Cards');
     
-    processedItems.forEach((item) => {
+    processedItems.forEach((item, index) => {
+      console.log(`📁 Adding to ZIP [${index + 1}/${processedItems.length}]: ${item.filename}`);
       // Create individual folder for each card
       const cardFolder = masterFolder!.folder(item.filename);
       
