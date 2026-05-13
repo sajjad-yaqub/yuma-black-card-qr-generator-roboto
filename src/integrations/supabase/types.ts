@@ -14,7 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      card_ids: {
+        Row: {
+          card_id: string
+          card_id_numeric: number | null
+          created_at: string
+          id: string
+          source: string | null
+        }
+        Insert: {
+          card_id: string
+          card_id_numeric?: number | null
+          created_at?: string
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          card_id?: string
+          card_id_numeric?: number | null
+          created_at?: string
+          id?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
