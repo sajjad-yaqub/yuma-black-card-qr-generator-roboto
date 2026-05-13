@@ -20,6 +20,7 @@ export type Database = {
           card_id_numeric: number | null
           created_at: string
           id: string
+          qr_content: string | null
           source: string | null
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           card_id_numeric?: number | null
           created_at?: string
           id?: string
+          qr_content?: string | null
           source?: string | null
         }
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           card_id_numeric?: number | null
           created_at?: string
           id?: string
+          qr_content?: string | null
           source?: string | null
         }
         Relationships: []
