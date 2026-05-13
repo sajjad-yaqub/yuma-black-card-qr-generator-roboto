@@ -3,15 +3,16 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { FileUpload } from './FileUpload';
 import { ImagePreview } from './ImagePreview';
 import { CSVEditor } from './CSVEditor';
 import { toast } from 'sonner';
-import { Download, FileImage, FileText } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
+import cardFrontImg from '@/assets/card-front.png';
+import cardBackImg from '@/assets/card-back.png';
 
 interface ProcessedItem {
   text: string;
@@ -23,8 +24,6 @@ interface ProcessedItem {
 
 export const QRCodeGenerator = () => {
   const [csvData, setCsvData] = useState<string[]>([]);
-  const [frontImage, setFrontImage] = useState<File | null>(null);
-  const [backImage, setBackImage] = useState<File | null>(null);
   const [processedItems, setProcessedItems] = useState<ProcessedItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -109,7 +108,7 @@ export const QRCodeGenerator = () => {
   };
 
   const overlayOnImage = (
-    baseImage: File,
+    baseImageSrc: string,
     text: string,
     qrCode?: string,
     isBack: boolean = false
@@ -198,12 +197,9 @@ export const QRCodeGenerator = () => {
           resolve(canvas.toDataURL('image/png', 1.0)); // Maximum quality PNG
         }
       };
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(baseImage);
+
+      img.crossOrigin = 'anonymous';
+      img.src = baseImageSrc;
     });
   };
 
@@ -215,11 +211,6 @@ export const QRCodeGenerator = () => {
     
     if (dataToProcess.length === 0) {
       toast.error('Please add some data to process');
-      return;
-    }
-    
-    if (!frontImage || !backImage) {
-      toast.error('Please upload front and back images');
       return;
     }
 
@@ -250,8 +241,8 @@ export const QRCodeGenerator = () => {
               const gradientQR = await createGradientQR(qrDataUrl);
               
               // Create front and back images
-              const frontImageData = await overlayOnImage(frontImage, filename, undefined, false);
-              const backImageData = await overlayOnImage(backImage, filename, gradientQR, true);
+              const frontImageData = await overlayOnImage(cardFrontImg, filename, undefined, false);
+              const backImageData = await overlayOnImage(cardBackImg, filename, gradientQR, true);
               
               console.log(`✅ Successfully processed: "${trimmedText}" -> "${filename}"`);
               return {
@@ -438,54 +429,11 @@ export const QRCodeGenerator = () => {
         {/* CSV Data Editor Section */}
         <CSVEditor onDataChange={setCsvData} initialData={csvData} />
 
-        {/* Upload Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileImage className="w-5 h-5" />
-                Front Image
-              </CardTitle>
-              <CardDescription>
-                Background for filename only
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FileUpload
-                accept=".png,.jpg,.jpeg"
-                onFileSelect={setFrontImage}
-                selectedFile={frontImage}
-                placeholder="Upload front image"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileImage className="w-5 h-5" />
-                Back Image
-              </CardTitle>
-              <CardDescription>
-                Background for QR code + filename
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FileUpload
-                accept=".png,.jpg,.jpeg"
-                onFileSelect={setBackImage}
-                selectedFile={backImage}
-                placeholder="Upload back image"
-              />
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Process Button */}
         <div className="text-center">
           <Button
             onClick={processFiles}
-            disabled={csvData.length === 0 || !frontImage || !backImage || isProcessing}
+            disabled={csvData.length === 0 || isProcessing}
             size="lg"
             className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700"
           >
