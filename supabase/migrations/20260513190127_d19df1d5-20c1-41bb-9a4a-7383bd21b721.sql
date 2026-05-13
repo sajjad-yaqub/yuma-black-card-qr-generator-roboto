@@ -1,0 +1,1 @@
+ALTER TABLE public.card_ids ADD COLUMN IF NOT EXISTS qr_content text;
