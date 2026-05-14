@@ -165,8 +165,13 @@ export const QRCodeGenerator = () => {
     });
   };
 
-  const processList = async (list: string[]) => {
-    if (list.length === 0) {
+  interface CardEntry {
+    card_id: string;
+    qr_content: string | null;
+  }
+
+  const processList = async (entries: CardEntry[]) => {
+    if (entries.length === 0) {
       toast.error('No card IDs to process');
       return;
     }
@@ -176,34 +181,35 @@ export const QRCodeGenerator = () => {
     try {
       const items: ProcessedItem[] = [];
       const batchSize = 5;
-      for (let i = 0; i < list.length; i += batchSize) {
-        const batch = list.slice(i, i + batchSize);
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const batch = entries.slice(i, i + batchSize);
         const batchResults = await Promise.all(
-          batch.map(async (text) => {
-            const trimmedText = text.trim();
-            if (!trimmedText) return null;
-            const filename = generateFilename(trimmedText);
+          batch.map(async (entry) => {
+            const cardId = entry.card_id.trim();
+            const qrText = (entry.qr_content ?? cardId).trim();
+            if (!cardId) return null;
+            const filename = generateFilename(cardId);
             try {
-              const qrDataUrl = await generateQRCode(trimmedText);
+              const qrDataUrl = await generateQRCode(qrText);
               const gradientQR = await createGradientQR(qrDataUrl);
               const frontImageData = await overlayOnImage(cardFrontImg, filename, undefined, false);
               const backImageData = await overlayOnImage(cardBackImg, filename, gradientQR, true);
-              return { text: trimmedText, filename, qrCode: gradientQR, frontImage: frontImageData, backImage: backImageData };
+              return { cardId, qrContent: qrText, filename, qrCode: gradientQR, frontImage: frontImageData, backImage: backImageData };
             } catch (e) {
-              console.error('Error processing', trimmedText, e);
+              console.error('Error processing', cardId, e);
               return null;
             }
           })
         );
         items.push(...(batchResults.filter(Boolean) as ProcessedItem[]));
-        setProgress(((i + batch.length) / list.length) * 100);
-        if (i + batchSize < list.length) {
+        setProgress(((i + batch.length) / entries.length) * 100);
+        if (i + batchSize < entries.length) {
           await new Promise((r) => setTimeout(r, 50));
         }
       }
       setProcessedItems(items);
-      const failed = list.length - items.length;
-      if (failed > 0) toast.warning(`Processed ${items.length}/${list.length} (${failed} failed)`);
+      const failed = entries.length - items.length;
+      if (failed > 0) toast.warning(`Processed ${items.length}/${entries.length} (${failed} failed)`);
       else toast.success(`Generated ${items.length} card${items.length === 1 ? '' : 's'}`);
     } finally {
       setIsProcessing(false);
