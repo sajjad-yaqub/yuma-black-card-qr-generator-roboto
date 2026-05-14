@@ -18,7 +18,8 @@ import cardBackImg from '@/assets/card-back.png';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessedItem {
-  text: string;
+  cardId: string;
+  qrContent: string;
   filename: string;
   qrCode: string;
   frontImage: string;
