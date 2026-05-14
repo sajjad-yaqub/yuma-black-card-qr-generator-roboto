@@ -6,7 +6,8 @@ import { Download, FileImage, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface ProcessedItem {
-  text: string;
+  cardId: string;
+  qrContent: string;
   filename: string;
   qrCode: string;
   frontImage: string;
@@ -59,7 +60,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ items, onDownloadIma
                 {item.filename}
               </h3>
               <p className="text-xs text-muted-foreground truncate">
-                {item.text}
+                {item.cardId}
               </p>
             </div>
             

@@ -18,7 +18,8 @@ import cardBackImg from '@/assets/card-back.png';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessedItem {
-  text: string;
+  cardId: string;
+  qrContent: string;
   filename: string;
   qrCode: string;
   frontImage: string;
@@ -164,8 +165,13 @@ export const QRCodeGenerator = () => {
     });
   };
 
-  const processList = async (list: string[]) => {
-    if (list.length === 0) {
+  interface CardEntry {
+    card_id: string;
+    qr_content: string | null;
+  }
+
+  const processList = async (entries: CardEntry[]) => {
+    if (entries.length === 0) {
       toast.error('No card IDs to process');
       return;
     }
@@ -175,34 +181,35 @@ export const QRCodeGenerator = () => {
     try {
       const items: ProcessedItem[] = [];
       const batchSize = 5;
-      for (let i = 0; i < list.length; i += batchSize) {
-        const batch = list.slice(i, i + batchSize);
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const batch = entries.slice(i, i + batchSize);
         const batchResults = await Promise.all(
-          batch.map(async (text) => {
-            const trimmedText = text.trim();
-            if (!trimmedText) return null;
-            const filename = generateFilename(trimmedText);
+          batch.map(async (entry) => {
+            const cardId = entry.card_id.trim();
+            const qrText = (entry.qr_content ?? cardId).trim();
+            if (!cardId) return null;
+            const filename = generateFilename(cardId);
             try {
-              const qrDataUrl = await generateQRCode(trimmedText);
+              const qrDataUrl = await generateQRCode(qrText);
               const gradientQR = await createGradientQR(qrDataUrl);
               const frontImageData = await overlayOnImage(cardFrontImg, filename, undefined, false);
               const backImageData = await overlayOnImage(cardBackImg, filename, gradientQR, true);
-              return { text: trimmedText, filename, qrCode: gradientQR, frontImage: frontImageData, backImage: backImageData };
+              return { cardId, qrContent: qrText, filename, qrCode: gradientQR, frontImage: frontImageData, backImage: backImageData };
             } catch (e) {
-              console.error('Error processing', trimmedText, e);
+              console.error('Error processing', cardId, e);
               return null;
             }
           })
         );
         items.push(...(batchResults.filter(Boolean) as ProcessedItem[]));
-        setProgress(((i + batch.length) / list.length) * 100);
-        if (i + batchSize < list.length) {
+        setProgress(((i + batch.length) / entries.length) * 100);
+        if (i + batchSize < entries.length) {
           await new Promise((r) => setTimeout(r, 50));
         }
       }
       setProcessedItems(items);
-      const failed = list.length - items.length;
-      if (failed > 0) toast.warning(`Processed ${items.length}/${list.length} (${failed} failed)`);
+      const failed = entries.length - items.length;
+      if (failed > 0) toast.warning(`Processed ${items.length}/${entries.length} (${failed} failed)`);
       else toast.success(`Generated ${items.length} card${items.length === 1 ? '' : 's'}`);
     } finally {
       setIsProcessing(false);
@@ -220,25 +227,25 @@ export const QRCodeGenerator = () => {
       // Try exact match first, then suffix match (last 11 chars convention)
       const { data: exact, error: e1 } = await supabase
         .from('card_ids')
-        .select('card_id')
+        .select('card_id, qr_content')
         .eq('card_id', q)
         .maybeSingle();
       if (e1) throw e1;
-      let match = exact?.card_id;
+      let match = exact;
       if (!match) {
         const { data: like, error: e2 } = await supabase
           .from('card_ids')
-          .select('card_id')
+          .select('card_id, qr_content')
           .ilike('card_id', `%${q}`)
           .limit(1);
         if (e2) throw e2;
-        match = like?.[0]?.card_id;
+        match = like?.[0] ?? null;
       }
       if (!match) {
         toast.error('No card found with that ID');
         return;
       }
-      await processList([match]);
+      await processList([{ card_id: match.card_id, qr_content: match.qr_content }]);
     } catch (err) {
       console.error(err);
       toast.error('Search failed');
@@ -264,22 +271,22 @@ export const QRCodeGenerator = () => {
     try {
       const { data, error } = await supabase
         .from('card_ids')
-        .select('card_id, card_id_numeric')
+        .select('card_id, card_id_numeric, qr_content')
         .gte('card_id_numeric', fromNum)
         .lte('card_id_numeric', toNum)
         .order('card_id_numeric', { ascending: true })
         .limit(RANGE_LIMIT + 1);
       if (error) throw error;
-      const list = (data ?? []).map((r) => r.card_id as string);
-      if (list.length === 0) {
+      const entries = (data ?? []).map((r) => ({ card_id: r.card_id as string, qr_content: r.qr_content as string | null }));
+      if (entries.length === 0) {
         toast.error('No cards in that range');
         return;
       }
-      if (list.length > RANGE_LIMIT) {
+      if (entries.length > RANGE_LIMIT) {
         toast.warning(`Range exceeds ${RANGE_LIMIT}; processing first ${RANGE_LIMIT}`);
-        list.length = RANGE_LIMIT;
+        entries.length = RANGE_LIMIT;
       }
-      await processList(list);
+      await processList(entries);
     } catch (err) {
       console.error(err);
       toast.error('Range query failed');
