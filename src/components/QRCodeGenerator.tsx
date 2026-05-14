@@ -227,25 +227,25 @@ export const QRCodeGenerator = () => {
       // Try exact match first, then suffix match (last 11 chars convention)
       const { data: exact, error: e1 } = await supabase
         .from('card_ids')
-        .select('card_id')
+        .select('card_id, qr_content')
         .eq('card_id', q)
         .maybeSingle();
       if (e1) throw e1;
-      let match = exact?.card_id;
+      let match = exact;
       if (!match) {
         const { data: like, error: e2 } = await supabase
           .from('card_ids')
-          .select('card_id')
+          .select('card_id, qr_content')
           .ilike('card_id', `%${q}`)
           .limit(1);
         if (e2) throw e2;
-        match = like?.[0]?.card_id;
+        match = like?.[0] ?? null;
       }
       if (!match) {
         toast.error('No card found with that ID');
         return;
       }
-      await processList([match]);
+      await processList([{ card_id: match.card_id, qr_content: match.qr_content }]);
     } catch (err) {
       console.error(err);
       toast.error('Search failed');
@@ -271,22 +271,22 @@ export const QRCodeGenerator = () => {
     try {
       const { data, error } = await supabase
         .from('card_ids')
-        .select('card_id, card_id_numeric')
+        .select('card_id, card_id_numeric, qr_content')
         .gte('card_id_numeric', fromNum)
         .lte('card_id_numeric', toNum)
         .order('card_id_numeric', { ascending: true })
         .limit(RANGE_LIMIT + 1);
       if (error) throw error;
-      const list = (data ?? []).map((r) => r.card_id as string);
-      if (list.length === 0) {
+      const entries = (data ?? []).map((r) => ({ card_id: r.card_id as string, qr_content: r.qr_content as string | null }));
+      if (entries.length === 0) {
         toast.error('No cards in that range');
         return;
       }
-      if (list.length > RANGE_LIMIT) {
+      if (entries.length > RANGE_LIMIT) {
         toast.warning(`Range exceeds ${RANGE_LIMIT}; processing first ${RANGE_LIMIT}`);
-        list.length = RANGE_LIMIT;
+        entries.length = RANGE_LIMIT;
       }
-      await processList(list);
+      await processList(entries);
     } catch (err) {
       console.error(err);
       toast.error('Range query failed');

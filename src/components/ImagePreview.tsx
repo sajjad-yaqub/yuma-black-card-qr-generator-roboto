@@ -6,7 +6,8 @@ import { Download, FileImage, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 interface ProcessedItem {
-  text: string;
+  cardId: string;
+  qrContent: string;
   filename: string;
   qrCode: string;
   frontImage: string;
