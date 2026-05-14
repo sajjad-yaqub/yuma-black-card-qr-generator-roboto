@@ -60,7 +60,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({ items, onDownloadIma
                 {item.filename}
               </h3>
               <p className="text-xs text-muted-foreground truncate">
-                {item.text}
+                {item.cardId}
               </p>
             </div>
             
