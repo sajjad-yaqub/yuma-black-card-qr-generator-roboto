@@ -420,7 +420,7 @@ export const QRCodeGenerator = () => {
                     <Label htmlFor="from">From (Start card ID)</Label>
                     <Input
                       id="from"
-                      placeholder="e.g. 10000000000"
+                      placeholder="THW00300001"
                       value={rangeFrom}
                       onChange={(e) => setRangeFrom(e.target.value)}
                     />
@@ -429,7 +429,7 @@ export const QRCodeGenerator = () => {
                     <Label htmlFor="to">To (End card ID)</Label>
                     <Input
                       id="to"
-                      placeholder="e.g. 10000000100"
+                      placeholder="THW00300100"
                       value={rangeTo}
                       onChange={(e) => setRangeTo(e.target.value)}
                     />
