@@ -417,7 +417,7 @@ export const QRCodeGenerator = () => {
               <TabsContent value="range" className="space-y-3 pt-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="from">From (numeric)</Label>
+                    <Label htmlFor="from">From (Start card ID)</Label>
                     <Input
                       id="from"
                       placeholder="e.g. 10000000000"
@@ -426,7 +426,7 @@ export const QRCodeGenerator = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="to">To (numeric)</Label>
+                    <Label htmlFor="to">To (End card ID)</Label>
                     <Input
                       id="to"
                       placeholder="e.g. 10000000100"
