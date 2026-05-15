@@ -376,10 +376,10 @@ export const QRCodeGenerator = () => {
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
-            QR Code Generator & Image Overlay
+            Yuma Gold Card Generator
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Search a card ID or a numeric range to generate front and back images.
+            Search a single card ID or a range to generate front and back images.
           </p>
         </div>
 
