@@ -386,7 +386,7 @@ export const QRCodeGenerator = () => {
         <Card>
           <CardHeader>
             <CardTitle>Find Cards</CardTitle>
-            <CardDescription>Search a single card by ID or fetch a numeric range.</CardDescription>
+            <CardDescription>Search a single card by ID or a range of card IDs.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="single">
