@@ -399,7 +399,7 @@ export const QRCodeGenerator = () => {
                 <div className="flex gap-2">
                   <Input
                     id="single"
-                    placeholder="Enter full card ID"
+                    placeholder="e.g., THW00300100"
                     value={singleQuery}
                     onChange={(e) => setSingleQuery(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSingleSearch(); }}
